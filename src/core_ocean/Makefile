@@ -9,6 +9,7 @@ all: shared libcvmix analysis_members libBGC
 	(cd mode_analysis; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
 	(cd mode_init; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
 	(cd driver; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
+	(cd shtns; ./configure --enable-openmp; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
 	if [ -e libdycore.a ]; then \
 		($(RM) libdycore.a) \
 	fi
@@ -81,5 +82,6 @@ clean:
 	(cd driver; $(MAKE) clean)
 	(cd analysis_members; $(MAKE) clean)
 	(cd shared; $(MAKE) clean)
+	(cd shtns; $(MAKE) clean)
 	($(RM) *.mod libdycore.a Registry_processed.xml)
 	$(RM) -r default_inputs
