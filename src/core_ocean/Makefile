@@ -66,7 +66,7 @@ analysis_members: libcvmix shared
 	( cd analysis_members; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" CPPFLAGS="$(CPPFLAGS)" CPPINCLUDES="$(CPPINCLUDES)" all ) 
 
 shtns: shtns
-	(cd shtns; ./configure --enable-openmp; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)")
+	(cd shtns; echo "---------- Making SHTns ------------; ./configure --enable-openmp; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)")
 
 clean:
 	if [ -e cvmix/.git ]; then \
