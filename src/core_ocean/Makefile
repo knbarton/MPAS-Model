@@ -3,7 +3,8 @@
 
 OCEAN_SHARED_INCLUDES = -I$(PWD)/../framework -I$(PWD)/../external/esmf_time_f90 -I$(PWD)/../operators
 OCEAN_SHARED_INCLUDES += -I$(PWD)/BGC -I$(PWD)/shared -I$(PWD)/analysis_members -I$(PWD)/cvmix/src/shared -I$(PWD)/mode_forward -I$(PWD)/mode_analysis -I$(PWD)/mode_init
-FCINCLUDES += -I/$(PWD)/shtns/include
+FCINCLUDES += -I/$(PWD)/shtns
+CPPINCLUDES += -I/$(PWD)/shtns
 
 all: shared libcvmix analysis_members libBGC shtns
 	(cd mode_forward; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
