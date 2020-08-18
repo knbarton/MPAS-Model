@@ -28,6 +28,7 @@ module ocn_vel_tidal_potential
    use mpas_timekeeping
    use mpas_timer
    use ocn_constants
+   use netcdf 
 
    implicit none
    private
@@ -284,7 +285,7 @@ contains
 !-----------------------------------------------------------------------
 
    subroutine ocn_vel_tidal_potential_init(domain,err)!{{{
-
+      
       type (domain_type), intent(inout) :: domain
       integer, intent(out) :: err !< Output: error flag
 
@@ -319,6 +320,14 @@ contains
       integer :: iCell,iCon
       real (kind=RKIND) :: lat
 
+      integer :: toNcId, toStatus, toNsDimId, toRowId, toColId, toSId, toNsLen
+      integer :: fromNcId, fromStatus, fromNsDimId, fromRowId, fromColId, fromSId, fromNsLen
+      integer :: toRowDims, toRowAtts, toColdDims, toColAtts, toNsDims, toNsAtts
+      integer :: fromRowDims, fromRowAtts, fromColdDims, fromColAtts, fromNsDims, fromNsAtts
+      integer, dimension(:), allocatable :: toRowValues, toColValues
+      integer, dimension(:), allocatable :: fromRowValues, fromColValues
+      real, dimension(:), allocatable :: toSValues, fromSValues
+      character (len = NF90_MAX_NAME) :: toNsName, fromNsName
 
       err = 0
 
@@ -448,9 +457,64 @@ contains
         block_ptr => block_ptr % next
       end do      
 
+      ! Open netcdf weights files
+      call check( nf90_open(path = "mpas_to_grid.nc", mode = nf90_nowrite, ncid = toNcId) )
+      call check( nf90_open(path = "grid_to_mpas.nc", mode = nf90_nowrite, ncid = fromNcId) )
+
+      ! Get dimension ID
+      call check( nf90_inq_dimid(toNcId, "n_s", toNsDimId) )
+      call check( nf90_inq_dimid(fromNcId, "n_s", fromNsDimId) )
+
+      ! Get Variable IDs
+      call check( nf90_inq_varid(toNcId, "row", toRowId) )
+      call check( nf90_inq_varid(toNcId, "col", toColId) )
+      call check( nf90_inq_varid(toNcId, "S", toSId) )
+      call check( nf90_inq_varid(fromNcId, "row", fromRowId) )
+      call check( nf90_inq_varid(fromNcId, "col", fromColId) )
+      call check( nf90_inq_varid(fromNcId, "S", fromSId) )
+
+      ! Get Dimension Length
+      call check( nf90_inquire_dimension(toNcId, toNsDimId, toNsName, toNsLen) )
+      call check( nf90_inquire_dimension(fromNcId, fromNsDimId, fromNsName, fromNsLen) )
+
+      ! Allocate matrices to read data into
+      allocate (toRowValues (toNsLen) )
+      allocate ( toColValues (toNsLen) )
+      allocate ( toSValues (toNsLen) )
+      allocate (fromRowValues (fromNsLen) )
+      allocate ( fromColValues (fromNsLen) )
+      allocate ( fromSValues (fromNsLen) )
+
+      ! Retrieve data
+      call check( nf90_get_var(toNcId, toColId, toColValues(:) ) )
+      call check( nf90_get_var(toNcId, toRowId, toRowValues(:) ) )
+      call check( nf90_get_var(toNcId, toSId, toSValues(:) ) )
+      call check( nf90_get_var(fromNcId, fromColId, fromColValues(:) ) )
+      call check( nf90_get_var(fromNcId, fromRowId, fromRowValues(:) ) )
+      call check( nf90_get_var(fromNcId, fromSId, fromSValues(:) ) )
+
+      ! Record nsLen, SValues, ColValues, RowValues
+      print *, "The first 'to' S values are: "
+      print *, toSValues(1), toSValues(2), toSValues(3), toSValues(4), toSValues(5)
+
+      ! Deallocate space
+      deallocate( toRowValues )
+      deallocate( toColValues )
+      deallocate( toSValues )
+      deallocate( fromRowValues )
+      deallocate( fromColValues )
+      deallocate( fromSValues )
 
    end subroutine ocn_vel_tidal_potential_init!}}}
 
+   subroutine check(status)
+     integer, intent ( in) :: status
+
+     if(status /= nf90_noerr) then
+        print *, trim(nf90_strerror(status))
+        stop "Stopped"
+     end if
+   end subroutine
 
 !***********************************************************************
 !
