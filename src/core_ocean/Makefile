@@ -2,16 +2,14 @@
 
 
 OCEAN_SHARED_INCLUDES = -I$(PWD)/../framework -I$(PWD)/../external/esmf_time_f90 -I$(PWD)/../operators
-OCEAN_SHARED_INCLUDES += -I$(PWD)/BGC -I$(PWD)/shared -I$(PWD)/analysis_members -I$(PWD)/cvmix/src/shared -I$(PWD)/mode_forward -I$(PWD)/mode_analysis -I$(PWD)/mode_init
-FCINCLUDES += -I/$(PWD)/shtns
-CPPINCLUDES += -I/$(PWD)/shtns
+OCEAN_SHARED_INCLUDES += -I$(PWD)/BGC -I$(PWD)/shared -I$(PWD)/analysis_members -I$(PWD)/cvmix/src/shared -I$(PWD)/mode_forward -I$(PWD)/mode_analysis -I$(PWD)/mode_init -I$(PWD)/shtns
 
-all: shared libcvmix analysis_members libBGC shtns
+all: shtns shared libcvmix analysis_members libBGC
 	(cd mode_forward; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
 	(cd mode_analysis; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
 	(cd mode_init; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
 	(cd driver; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
-	(cd shtns; export CPP=cpp; ./configure --prefix=`pwd` --enable-openmp; make; make install; export CPP='cpp -P -traditional')
+	(cd shtns; echo $(FCINCLUDES); export CPP=cpp; ./configure --enable-openmp; echo "----- shtns ----"; make; export CPP='cpp -P -traditional')
 	if [ -e libdycore.a ]; then \
 		($(RM) libdycore.a) \
 	fi
@@ -65,7 +63,7 @@ libBGC:
 		(echo "Missing core_ocean/BGC/.git, did you forget to 'git submodule update --init --recursive' ?"; exit 1) \
 	fi
 
-shared: libcvmix libBGC
+shared: libcvmix libBGC shtns
 	(cd shared; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)")
 
 analysis_members: libcvmix shared
