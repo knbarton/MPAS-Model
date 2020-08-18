@@ -28,10 +28,13 @@ module ocn_vel_tidal_potential
    use mpas_timekeeping
    use mpas_timer
    use ocn_constants
-
+   
    implicit none
    private
    save
+
+   include 'shtns.f' 
+
 
    !--------------------------------------------------------------------
    !
@@ -284,9 +287,6 @@ contains
 !-----------------------------------------------------------------------
 
    subroutine ocn_vel_tidal_potential_init(domain,err)!{{{
-
-      include 'shtns.f'
-      print *, "SHTns is working if the following says 1024: ", SHT_NO_CS_PHASE
 
       type (domain_type), intent(inout) :: domain
       integer, intent(out) :: err !< Output: error flag
