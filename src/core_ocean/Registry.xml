@@ -103,6 +103,9 @@
 			description="Max number of tidal potential constituents"
 			definition="maxTidalConstituents+maxTidalConstituents"
 		/>
+		<dim name="n_s"
+			description="Number of values in interpolation weight matrix"
+		/>
 	</dims>
 
 	<!--*************************************-->
@@ -1856,6 +1859,30 @@
 			<var name="pointCellGlobalID"/>
 		</stream>
 
+		<stream name="mpasToGrid"
+				type="input"
+				filename_template="mpas_to_grid.nc"
+				input_interval="initial_only"
+				runtime_format="single_file"
+				mode="forward">
+
+			<var_struct name="weights"/>
+			<var name="col"/>
+			<var name="row"/>
+			<var name="S"/>
+		</stream>
+
+		<stream name="gridToMpas"
+				type="input"
+				filename_template="mpas_to_grid.nc"
+				input_interval="initial_only"
+				runtime_format="single_file"
+				mode="forward">
+			<var_struct name="weights"/>
+			<var name="col"/>
+			<var name="row"/>
+			<var name="S"/>
+		</stream>
 	</streams>
 
 	<var_struct name="state" time_levs="2">
@@ -3697,6 +3724,26 @@
 			units="unitless"
 			description="The name for each transect group."
 			/>
+	</var_struct>
+	<var_struct name="weights" time_levs="1">
+		<var name="col"
+			type="integer"
+			dimensions="n_s"
+			units="unitless"
+			description="Interpolation weight grid column values"
+		/>
+		<var name="row"
+			type="integer"
+			dimensions="n_s"
+			units="unitless"
+			description="Interpolation weight grid column values"
+		/>
+		<var name="S"
+			type="integer"
+			dimensions="n_s"
+			units="unitless"
+			description="Interpolation weight grid column values"
+		/>
 	</var_struct>
 
 <!-- Include registry files from subdirectories -->
