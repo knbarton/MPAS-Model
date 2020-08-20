@@ -225,6 +225,10 @@ contains
       real (kind=RKIND) :: lon,tArg,ramp,t
       real (kind=RKIND) :: nCycles,period
 
+      type (field1DInteger), pointer :: toRowValues
+      type (field1DInteger), pointer :: testPtr
+      integer, pointer :: toNsLen
+
       err = 0
 
       if ( .not. tidalPotentialOn ) return
@@ -243,6 +247,13 @@ contains
       call mpas_pool_get_array(forcingPool, 'tidalPotentialLatitudeFunction', latitudeFunction)
       call mpas_pool_get_array(forcingPool, 'tidalPotentialEta', eta)
       call mpas_pool_get_array(diagnosticsPool, "daysSinceStartOfSim", daysSinceStartOfSim)
+
+      call mpas_pool_get_field(forcingPool, 'toRowValues', toRowValues)
+      call mpas_pool_get_dimension(forcingPool, 'toNsLen', toNsLen)
+      call mpas_pool_get_field(forcingPool, 'testVals', testPtr)
+      print *, "Test #2: ", testPtr % array (1)
+!      print *, "Row values are: ", toRowValues % array(1)
+ !     print *, "Ns values are: ", toNsLen
 
       ramp = tanh((2.0_RKIND*daysSinceStartOfSim)/tidalPotentialRamp)
       t = daysSinceStartOfSim*86400.0_RKIND
@@ -320,14 +331,25 @@ contains
       integer :: iCell,iCon
       real (kind=RKIND) :: lat
 
-      integer :: toNcId, toStatus, toNsDimId, toRowId, toColId, toSId, toNsLen
-      integer :: fromNcId, fromStatus, fromNsDimId, fromRowId, fromColId, fromSId, fromNsLen
+      integer :: toNcId, toStatus, toNsDimId, toRowId, toColId, toSId
+      integer :: fromNcId, fromStatus, fromNsDimId, fromRowId, fromColId, fromSId
+      integer:: toNsLen, fromNsLen
+      integer, pointer:: toNsLenPtr, fromNsLenPtr
       integer :: toRowDims, toRowAtts, toColdDims, toColAtts, toNsDims, toNsAtts
       integer :: fromRowDims, fromRowAtts, fromColdDims, fromColAtts, fromNsDims, fromNsAtts
-      integer, dimension(:), allocatable :: toRowValues, toColValues
-      integer, dimension(:), allocatable :: fromRowValues, fromColValues
-      real, dimension(:), allocatable :: toSValues, fromSValues
+      integer, dimension(:), target, allocatable :: toRowValues, toColValues
+      integer, dimension(:), pointer :: toRowValuesPtr, toColValuesPtr
+      integer, dimension(:), target, allocatable :: fromRowValues, fromColValues
+      integer, dimension(:), pointer :: fromRowValuesPtr, fromColValuesPtr
+      real, dimension(:), target, allocatable :: toSValues, fromSValues
+      real, dimension(:), pointer :: toSValuesPtr, fromSValuesPtr
       character (len = NF90_MAX_NAME) :: toNsName, fromNsName
+      integer, pointer :: n_s
+
+      type (field1DInteger), pointer :: fieldPtr, toRowValuesIn, testPtr, testOut
+      type (field1DInteger), target :: fieldTarget 
+      type (field0DInteger), pointer :: fieldScalar
+      integer :: index = 1
 
       err = 0
 
@@ -493,11 +515,40 @@ contains
       call check( nf90_get_var(fromNcId, fromRowId, fromRowValues(:) ) )
       call check( nf90_get_var(fromNcId, fromSId, fromSValues(:) ) )
 
-      ! Record nsLen, SValues, ColValues, RowValues
-      print *, "The first 'to' S values are: "
-      print *, toSValues(1), toSValues(2), toSValues(3), toSValues(4), toSValues(5)
+      ! Associate Pointers with data
+      toColValuesPtr => toColValues
+      toRowValuesPtr => toRowValues
+      toSValuesPtr => toSValues
+      fromColValuesPtr => fromColValues
+      fromRowValuesPtr => fromRowValues
+      fromSValuesPtr => fromSValues
 
-      ! Deallocate space
+      allocate( testPtr)
+      allocate( testPtr % array(toNsLen) )
+      allocate( fieldTarget % array(toNsLen) )
+      do index=1,toNsLen
+          fieldTarget  % array(index) = toRowValues(index)
+          testPtr % array(index) = toRowValues(index)
+      end do
+      fieldPtr => fieldTarget
+
+      ! Record nsLen, SValues, ColValues, RowValues
+      call mpas_pool_add_dimension(forcingPool, 'toNsLen', toNsLen)
+!      call mpas_pool_add_dimension(forcingPool, 'fromNsLen', fromNsLen)
+!      call mpas_pool_add_field(forcingPool, 'toColValues', toColValues)
+!      call mpas_pool_add_field(forcingPool, 'fromColValues', fromColValues)
+      call mpas_pool_add_field(forcingPool, 'toRowValues', fieldPtr)
+      call mpas_pool_add_field(forcingPool, 'testVals', testPtr)
+!      call mpas_pool_add_field(forcingPool, 'fromRowValues', fromRowValues)
+!      call mpas_pool_add_field(forcingPool, 'toSValues', toSValues)
+!      call mpas_pool_add_field(forcingPool, 'fromSValues', fromSValues)
+      print *, "Added fields to forcingPool"
+
+      call mpas_pool_get_field(forcingPool, 'testVals', testOut)
+      print *, "Test out: ", testOut % array (1)
+
+
+      ! Deallocate spaceA
       deallocate( toRowValues )
       deallocate( toColValues )
       deallocate( toSValues )
