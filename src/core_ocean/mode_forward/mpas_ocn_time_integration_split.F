@@ -143,6 +143,7 @@ module ocn_time_integration_split
       logical, pointer :: config_use_tracerGroup
       logical, pointer :: config_compute_active_tracer_budgets
       logical, pointer :: config_use_tidal_potential_forcing
+      logical, pointer :: config_use_self_attraction_loading
       logical, pointer :: config_reset_debugTracers_near_surface
 
       character (len=StrKIND), pointer :: config_land_ice_flux_mode
@@ -254,6 +255,7 @@ module ocn_time_integration_split
       call mpas_pool_get_config(domain % configs, 'config_disable_tr_all_tend', config_disable_tr_all_tend)
       call mpas_pool_get_config(domain % configs, 'config_use_tidal_potential_forcing', config_use_tidal_potential_forcing)
       call mpas_pool_get_config(domain % configs, 'config_self_attraction_and_loading_beta',config_self_attraction_and_loading_beta)
+      call mpas_pool_get_config(domain % configs, 'config_use_self_attraction_loading', config_use_self_attraction_loading)
 
       call mpas_pool_get_config(domain % configs, 'config_prescribe_velocity', config_prescribe_velocity)
       call mpas_pool_get_config(domain % configs, 'config_prescribe_thickness', config_prescribe_thickness)

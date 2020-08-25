@@ -60,6 +60,7 @@ module ocn_tendency
    use ocn_vmix
    use ocn_wetting_drying
    use ocn_vel_tidal_potential
+   use ocn_vel_self_attraction_loading
 
    implicit none
    private
@@ -246,6 +247,7 @@ contains
       logical, pointer :: config_use_wetting_drying
       logical, pointer :: config_prevent_drying
       logical, pointer :: config_use_tidal_potential_forcing
+      logical, pointer :: config_use_self_attraction_loading
       character (len=StrKIND), pointer :: config_pressure_gradient_type
       character (len=StrKIND), pointer :: config_time_integrator
       real (kind=RKIND), pointer :: config_self_attraction_and_loading_beta 
@@ -261,6 +263,7 @@ contains
       call mpas_pool_get_config(ocnConfigs, 'config_use_wetting_drying', config_use_wetting_drying)
       call mpas_pool_get_config(ocnConfigs, 'config_prevent_drying', config_prevent_drying)
       call mpas_pool_get_config(ocnConfigs, 'config_use_tidal_potential_forcing', config_use_tidal_potential_forcing)
+      call mpas_pool_get_config(ocnConfigs, 'config_use_self_attraction_loading', config_use_self_attraction_loading)
       call mpas_pool_get_config(ocnConfigs, 'config_self_attraction_and_loading_beta',config_self_attraction_and_loading_beta)
       call mpas_pool_get_config(ocnConfigs, 'config_time_integrator', config_time_integrator)
 
@@ -360,6 +363,11 @@ contains
         ! for split explicit, tidal forcing is added in barotropic subsycles
         call ocn_vel_tidal_potential_tend(meshPool, forcingPool, ssh, tend_normalVelocity, err) 
       endif
+
+      !
+      ! velocity tendency: self-attraction and loading (if needed)
+      !
+      call ocn_compute_self_attraction_loading(meshPool, forcingPool, diagnosticsPool, err)
 
       !
       ! velocity tendency: del2 dissipation, \nu_2 \nabla^2 u
