@@ -33,8 +33,6 @@ module ocn_vel_tidal_potential
    private
    save
 
-   include 'shtns.f' 
-
 
    !--------------------------------------------------------------------
    !
