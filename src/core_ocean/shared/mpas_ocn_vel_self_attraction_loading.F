@@ -30,13 +30,16 @@ module ocn_vel_self_attraction_loading
    use mpas_threading, only : mpas_threading_get_thread_num
    use ocn_constants
    use netcdf
+#ifdef _MPI
+   use mpi
+#endif
+   
    
    implicit none
    private
    save
 
    include 'shtns.f' 
-
 
    !--------------------------------------------------------------------
    !
@@ -151,7 +154,7 @@ contains
 !
 !-----------------------------------------------------------------------
 
-   subroutine ocn_compute_self_attraction_loading(meshPool, forcingPool, diagnosticsPool, err)!{{{
+   subroutine ocn_compute_self_attraction_loading(meshPool, forcingPool, diagnosticsPool, dminfo, err)!{{{
 
       !-----------------------------------------------------------------
       !
@@ -160,6 +163,7 @@ contains
       !-----------------------------------------------------------------
       type (mpas_pool_type), intent(in) :: meshPool !< Input: mesh information
       type (mpas_pool_type), intent(in) :: diagnosticsPool 
+      type (dm_info), intent(in) :: dminfo
 
       !-----------------------------------------------------------------
       !
@@ -182,7 +186,12 @@ contains
       !
       !-----------------------------------------------------------------
       
-      integer :: threadNum
+      integer :: threadNum, process_Rank
+
+      call MPI_COMM_SIZE( dminfo % comm, process_Rank, err)
+      print *, 'Process size: ', process_Rank
+
+      print *, "Compute"
 
       err = 0
 
@@ -225,6 +234,13 @@ contains
       type (field1DInteger), pointer :: toRowValuesPtr, toColValuesPtr
       type (field1Dinteger), pointer :: fromRowValuesPtr, fromColValuesPtr
       type (field1DReal), pointer :: toSValuesPtr, fromSValuesPtr
+
+      integer :: size_Of_Cluster
+
+      err = 0
+
+     ! call MPI_COMM_SIZE(domain % dminfo % comm, size_Of_Cluster, err)
+     ! print *, size_Of_Cluster
 
       call mpas_pool_get_config(ocnConfigs, 'config_use_self_attraction_loading', config_use_self_attraction_loading)
 
@@ -319,10 +335,7 @@ contains
       deallocate( fromColValues )
       deallocate( fromSValues )
 
-      print *, "init"
-
-      err = 0
-
+      print *, "Init"
 
    end subroutine ocn_vel_self_attraction_loading_init!}}}
 

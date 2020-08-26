@@ -210,7 +210,7 @@ contains
 !
 !-----------------------------------------------------------------------
 
-   subroutine ocn_tend_vel(tendPool, statePool, forcingPool, diagnosticsPool, meshPool, scratchPool, timeLevelIn, dt)!{{{
+   subroutine ocn_tend_vel(tendPool, statePool, forcingPool, diagnosticsPool, meshPool, scratchPool, timeLevelIn, dt, dminfo)!{{{
       implicit none
 
       type (mpas_pool_type), intent(inout) :: tendPool !< Input/Output: Tendency structure
@@ -223,6 +223,7 @@ contains
       integer, intent(in), optional :: timeLevelIn !< Input: Time level for state fields
 
       type (mpas_pool_type), pointer :: tracersPool
+      type (dm_info) :: dminfo
 
       real (kind=RKIND), dimension(:), pointer :: surfaceStress, surfaceStressMagnitude, surfaceFluxAttenuationCoefficient, ssh
       real (kind=RKIND), dimension(:), pointer :: tidalPotentialEta 
@@ -367,7 +368,7 @@ contains
       !
       ! velocity tendency: self-attraction and loading (if needed)
       !
-      call ocn_compute_self_attraction_loading(meshPool, forcingPool, diagnosticsPool, err)
+      call ocn_compute_self_attraction_loading(meshPool, forcingPool, diagnosticsPool, dminfo, err)
 
       !
       ! velocity tendency: del2 dissipation, \nu_2 \nabla^2 u
