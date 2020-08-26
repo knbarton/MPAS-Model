@@ -154,7 +154,7 @@ contains
 !
 !-----------------------------------------------------------------------
 
-   subroutine ocn_compute_self_attraction_loading(meshPool, forcingPool, diagnosticsPool, err)!{{{
+   subroutine ocn_compute_self_attraction_loading(meshPool, forcingPool, diagnosticsPool, dminfo, err)!{{{
 
       !-----------------------------------------------------------------
       !
@@ -163,7 +163,7 @@ contains
       !-----------------------------------------------------------------
       type (mpas_pool_type), intent(in) :: meshPool !< Input: mesh information
       type (mpas_pool_type), intent(in) :: diagnosticsPool 
-!      type (dm_info), intent(in) :: dminfo
+      type (dm_info), intent(in) :: dminfo
 
       !-----------------------------------------------------------------
       !
@@ -188,8 +188,8 @@ contains
       
       integer :: threadNum, process_Rank
 
-!      call MPI_COMM_SIZE( dminfo % comm, process_Rank, err)
-!      print *, 'Process size: ', process_Rank
+      call MPI_COMM_RANK( dminfo % comm, process_Rank, err)
+      print *, 'Process Rank: ', process_Rank
 
       print *, "Compute"
 
