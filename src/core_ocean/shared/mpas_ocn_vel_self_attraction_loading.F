@@ -187,13 +187,17 @@ contains
       !-----------------------------------------------------------------
       
       integer :: threadNum, process_Rank
-
-      call MPI_COMM_RANK( dminfo % comm, process_Rank, err)
-      print *, 'Process Rank: ', process_Rank
-
-      print *, "Compute"
+      type (field1DInteger), pointer :: toColValuesPtr
 
       err = 0
+
+      call MPI_COMM_RANK( dminfo % comm, process_Rank, err)
+      call MPI_COMM_SIZE( dminfo % comm, threadNum, err)
+      
+      if (process_Rank .EQ. 0) then
+        call mpas_pool_get_field(forcingPool, 'toColValues', toColValuesPtr)
+        print *, toColValuesPtr % array(1), 'on ', process_Rank, '/', threadNum
+      end if
 
    end subroutine ocn_compute_self_attraction_loading!}}}
 
@@ -238,9 +242,6 @@ contains
       integer :: size_Of_Cluster
 
       err = 0
-
-     ! call MPI_COMM_SIZE(domain % dminfo % comm, size_Of_Cluster, err)
-     ! print *, size_Of_Cluster
 
       call mpas_pool_get_config(ocnConfigs, 'config_use_self_attraction_loading', config_use_self_attraction_loading)
 
@@ -335,7 +336,9 @@ contains
       deallocate( fromColValues )
       deallocate( fromSValues )
 
-      print *, "Init"
+      if (domain % dminfo % my_proc_id .EQ. 0) then
+        print *, "Init"
+      end if
 
    end subroutine ocn_vel_self_attraction_loading_init!}}}
 
