@@ -368,7 +368,7 @@ contains
       !
       ! velocity tendency: self-attraction and loading (if needed)
       !
-      call ocn_compute_self_attraction_loading(meshPool, forcingPool, diagnosticsPool, dminfo, err)
+      call ocn_compute_self_attraction_loading(meshPool, forcingPool, diagnosticsPool, dminfo, ssh, err)
 
       !
       ! velocity tendency: del2 dissipation, \nu_2 \nabla^2 u

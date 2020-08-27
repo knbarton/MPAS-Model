@@ -154,7 +154,7 @@ contains
 !
 !-----------------------------------------------------------------------
 
-   subroutine ocn_compute_self_attraction_loading(meshPool, forcingPool, diagnosticsPool, dminfo, err)!{{{
+   subroutine ocn_compute_self_attraction_loading(meshPool, forcingPool, diagnosticsPool, dminfo, ssh, err)!{{{
 
       !-----------------------------------------------------------------
       !
@@ -164,6 +164,7 @@ contains
       type (mpas_pool_type), intent(in) :: meshPool !< Input: mesh information
       type (mpas_pool_type), intent(in) :: diagnosticsPool 
       type (dm_info), intent(in) :: dminfo
+      real (kind=RKIND), dimension(:), pointer :: ssh
 
       !-----------------------------------------------------------------
       !
@@ -187,17 +188,37 @@ contains
       !-----------------------------------------------------------------
       
       integer :: threadNum, process_Rank
-      type (field1DInteger), pointer :: toColValuesPtr
+      integer, dimension(:), pointer :: indexToCellID
+      type (field1DInteger), pointer :: toColValuesPtr, fromColValuesPtr
+      type (field1DInteger), pointer :: toRowValuesPtr, fromRowValuesPtr
+      type (field1DReal), pointer :: toSValuesPtr, fromSValuesPtr
+      integer, pointer :: toNsLen, fromNsLen
 
       err = 0
-
+      
+      ! MPI commands
       call MPI_COMM_RANK( dminfo % comm, process_Rank, err)
       call MPI_COMM_SIZE( dminfo % comm, threadNum, err)
       
+      ! Prepare data on nodes
+
+
+      ! Do on master
       if (process_Rank .EQ. 0) then
+
+        ! Get weight data from the pool
         call mpas_pool_get_field(forcingPool, 'toColValues', toColValuesPtr)
-        print *, toColValuesPtr % array(1), 'on ', process_Rank, '/', threadNum
+        call mpas_pool_get_field(forcingPool, 'fromColValues', fromColValuesPtr)
+        call mpas_pool_get_field(forcingPool, 'toRowValues', toRowValuesPtr)
+        call mpas_pool_get_field(forcingPool, 'fromRowValues', fromRowValuesPtr)
+        call mpas_pool_get_dimension(forcingPool, 'toNsLen', toNsLen)
+        call mpas_pool_get_dimension(forcingPool, 'fromNsLen', fromNsLen)
+
+        call mpas_pool_get_array(meshPool, 'indexToCellID', indexToCellID)
+
       end if
+
+      call mpas_pool_get_array(meshPool, 'indexToCellID', indexToCellID)
 
    end subroutine ocn_compute_self_attraction_loading!}}}
 
