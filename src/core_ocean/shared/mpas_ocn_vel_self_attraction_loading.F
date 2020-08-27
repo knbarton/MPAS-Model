@@ -187,23 +187,37 @@ contains
       !
       !-----------------------------------------------------------------
       
-      integer :: threadNum, process_Rank
+      integer :: process_Size, process_Rank
       integer, dimension(:), pointer :: indexToCellID
       type (field1DInteger), pointer :: toColValuesPtr, fromColValuesPtr
       type (field1DInteger), pointer :: toRowValuesPtr, fromRowValuesPtr
       type (field1DReal), pointer :: toSValuesPtr, fromSValuesPtr
       integer, pointer :: toNsLen, fromNsLen
+      integer, dimension(:), allocatable :: scount ! For MPI_Gather/Scatter
+      real, dimension(:), allocatable :: sshGlobal
+      integer :: sizeOnProcess, i
+!      real, dimension(:) :: ssh_test
 
       err = 0
       
       ! MPI commands
+      sizeOnProcess = size(ssh)
+      allocate( scount(sizeOnProcess) )
       call MPI_COMM_RANK( dminfo % comm, process_Rank, err)
-      call MPI_COMM_SIZE( dminfo % comm, threadNum, err)
+      call MPI_COMM_SIZE( dminfo % comm, process_Size, err)
+      call MPI_GATHER( sizeOnProcess, 1, MPI_INTEGER, scount, 1, MPI_INTEGER, &
+                       0, dminfo % comm, err)
+
+      allocate( sshGlobal( sum(scount) ) )
+!      allocate( ssh_test( size(sizeOnProcess) )
+!      do i=1,sizeOnProcess
+!        ssh_test(i) = ssh(i)
+!      end do 
+!      call MPI_GATHERV( ssh_test, scount, MPI_REAL, sshGlobal, scount,  MPI_REAL, &
+!                       0, dminfo % comm, err)
       
-      ! Prepare data on nodes
-
-
       ! Do on master
+      print *, 'process ', process_Rank
       if (process_Rank .EQ. 0) then
 
         ! Get weight data from the pool
@@ -215,6 +229,10 @@ contains
         call mpas_pool_get_dimension(forcingPool, 'fromNsLen', fromNsLen)
 
         call mpas_pool_get_array(meshPool, 'indexToCellID', indexToCellID)
+        
+        print *, 'before gather'
+        ! Make scount array for MPI gatherv/scatterv
+        print *, 'after gather: ', scount(1)
 
       end if
 
