@@ -11,7 +11,7 @@
 !
 !> \brief MPAS ocean module
 !> \author Kristin Barton 
-!> \date   September 2019
+!> \date   August 2020
 !> \details
 !>  This module contains routines for the tidal potential forcing.
 !>  Design document located in :
@@ -53,8 +53,7 @@ module ocn_vel_self_attraction_loading
    !
    !--------------------------------------------------------------------
 
-   public :: ocn_vel_self_attraction_loading_tend, &
-             ocn_compute_self_attraction_loading, &
+   public :: ocn_compute_self_attraction_loading, &
              ocn_vel_self_attraction_loading_init
 
    !--------------------------------------------------------------------
@@ -75,82 +74,16 @@ module ocn_vel_self_attraction_loading
 
 contains
 
-!***********************************************************************
-!
-!  routine ocn_vel_self_attraction_loading_tend
-!
-!> \brief   Computes tendency term for tidal potential
-!> \author  Kristin Barton
-!> \date    April 2020
-!> \details
-!>  This routine computes the tidal potential tendency for momentum
-!>  based on current state.
-!
-!-----------------------------------------------------------------------
-
-   subroutine ocn_vel_self_attraction_loading_tend(meshPool, forcingPool, ssh, tend, err)!{{{
-
-      !-----------------------------------------------------------------
-      !
-      ! input variables
-      !
-      !-----------------------------------------------------------------
-
-      real (kind=RKIND), dimension(:), intent(in) :: &
-         ssh !< Input: Sea surface height
-
-      type (mpas_pool_type), intent(in) :: meshPool          !< Input: mesh information
-      type (mpas_pool_type), intent(in) :: forcingPool       !< Input: forcinginformation
-
-      !-----------------------------------------------------------------
-      !
-      ! input/output variables
-      !
-      !-----------------------------------------------------------------
-
-      real (kind=RKIND), dimension(:,:), intent(inout) :: &
-         tend          !< Input/Output: velocity tendency
-
-      !-----------------------------------------------------------------
-      !
-      ! output variables
-      !
-      !-----------------------------------------------------------------
-
-      integer, intent(out) :: err !< Output: error flag
-
-      !-----------------------------------------------------------------
-      !
-      ! local variables
-      !
-      !-----------------------------------------------------------------
-
-      integer :: iEdge, k, cell1, cell2, nEdges
-      integer, dimension(:), pointer :: nEdgesArray
-      integer, dimension(:), pointer :: maxLevelEdgeTop, maxLevelCell
-      integer, dimension(:,:), pointer :: cellsOnEdge, edgeMask
-
-      real (kind=RKIND), dimension(:), pointer :: dcEdge
-      real (kind=RKIND), dimension(:), pointer :: tidalPotentialEta
-      real (kind=RKIND), pointer :: config_self_attraction_and_loading_beta
-      real (kind=RKIND) :: invdcEdge
-      real (kind=RKIND) :: potentialGrad
-      logical, pointer :: config_use_tidal_potential_forcing
-
-      err = 0
-
-   end subroutine ocn_vel_self_attraction_loading_tend!}}}
 
 !***********************************************************************
 !
 !  routine ocn_compute_self_attraction_loading
 !
-!> \brief   Computes equilibrium tidal potential 
+!> \brief   Computes self-attraction and loading 
 !> \author  Kristin Barton
-!> \date    September 2019
+!> \date    August 2020
 !> \details
-!>  This routine computes the equilibrium tidal potential due to all 
-!>  tidal constituents 
+!>  This routine computes the self-attraction and loading
 !
 !-----------------------------------------------------------------------
 
@@ -193,31 +126,41 @@ contains
       type (field1DInteger), pointer :: toRowValuesPtr, fromRowValuesPtr
       type (field1DReal), pointer :: toSValuesPtr, fromSValuesPtr
       integer, pointer :: toNsLen, fromNsLen
-      integer, dimension(:), allocatable :: scount ! For MPI_Gather/Scatter
+      integer, dimension(:), allocatable :: scount, stride ! For MPI_Gather/Scatter
       real, dimension(:), allocatable :: sshGlobal
-      integer :: sizeOnProcess, i
-!      real, dimension(:) :: ssh_test
+      integer :: sizeOnProcess
 
       err = 0
       
+!      if (.NOT. selfAttractionLoadingOn) return
+
       ! MPI commands
       sizeOnProcess = size(ssh)
-      allocate( scount(sizeOnProcess) )
       call MPI_COMM_RANK( dminfo % comm, process_Rank, err)
       call MPI_COMM_SIZE( dminfo % comm, process_Size, err)
+      
+      ! Allocate arrays on root and gather sizes
+      allocate( scount( process_Size ) )
+!      allocate( stride( process_Size ) )
+!      stride(process_Rank) = sizeOnProcess
+       
       call MPI_GATHER( sizeOnProcess, 1, MPI_INTEGER, scount, 1, MPI_INTEGER, &
                        0, dminfo % comm, err)
+      call MPI_BCAST( scount, process_Size, MPI_INTEGER, 0, dminfo % comm, err)
 
-      allocate( sshGlobal( sum(scount) ) )
-!      allocate( ssh_test( size(sizeOnProcess) )
-!      do i=1,sizeOnProcess
-!        ssh_test(i) = ssh(i)
-!      end do 
-!      call MPI_GATHERV( ssh_test, scount, MPI_REAL, sshGlobal, scount,  MPI_REAL, &
-!                       0, dminfo % comm, err)
+      if (process_Rank .EQ. 0) then
+        allocate( sshGlobal( sum(scount) ) )
+      end if
+
+      call mpas_pool_get_array(meshPool, 'indexToCellID', indexToCellID)
+
+      call MPI_BARRIER(dminfo % comm, err)
+      call MPI_GATHERV( ssh, sizeOnProcess, MPI_REAL, sshGlobal, scount, scount, &
+                MPI_REAL, 0, dminfo % comm, err)
       
-      ! Do on master
-      print *, 'process ', process_Rank
+      print *, 'process ', process_Rank, ' size: ', sizeOnProcess
+
+      call MPI_BARRIER(dminfo % comm, err) 
       if (process_Rank .EQ. 0) then
 
         ! Get weight data from the pool
@@ -228,15 +171,19 @@ contains
         call mpas_pool_get_dimension(forcingPool, 'toNsLen', toNsLen)
         call mpas_pool_get_dimension(forcingPool, 'fromNsLen', fromNsLen)
 
-        call mpas_pool_get_array(meshPool, 'indexToCellID', indexToCellID)
-        
-        print *, 'before gather'
-        ! Make scount array for MPI gatherv/scatterv
-        print *, 'after gather: ', scount(1)
+        print *, 'scount: ', scount
+        print *, '---------------------------------'
 
       end if
 
-      call mpas_pool_get_array(meshPool, 'indexToCellID', indexToCellID)
+      call MPI_BARRIER(dminfo % comm, err)
+      call MPI_SCATTERV( sshGlobal, scount, scount, MPI_REAL, ssh, sizeOnProcess, &
+                MPI_REAL, 0, dminfo % comm, err)
+
+      deallocate( scount )
+      if (process_Rank .EQ. 0) then
+        deallocate( sshGlobal )
+      end if
 
    end subroutine ocn_compute_self_attraction_loading!}}}
 
@@ -247,9 +194,9 @@ contains
 !
 !> \brief   Initializes ocean tidal protential forcing module.
 !> \author  Kristin Barton
-!> \date    September 2019
+!> \date    August 2020
 !> \details
-!>  This routine initializes the ocean tidal potential forcing module 
+!>  This routine initializes the ocean self-attraction and loading module 
 !>  and variables.
 !
 !-----------------------------------------------------------------------
