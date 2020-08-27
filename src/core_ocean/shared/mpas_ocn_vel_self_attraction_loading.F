@@ -357,13 +357,14 @@ contains
 
 !***********************************************************************
 !
-!  routine check
+!  routine interpolate
 !
-!> \brief   Check status of netcdf operations
+!> \brief   Perform interpolation
 !> \author  Kristin Barton
 !> \date    August 2020
 !> \details
-!>  This routine checks to status of the netcdf file
+!>  This routine checks contains the sparse matrix multiplication
+!>    algorithm to interpolate between MPAS and Gaussian Grid
 !
 !-----------------------------------------------------------------------
 
