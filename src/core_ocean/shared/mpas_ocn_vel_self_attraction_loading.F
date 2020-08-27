@@ -125,7 +125,7 @@ contains
       type (field1DInteger), pointer :: toColValuesPtr, fromColValuesPtr
       type (field1DInteger), pointer :: toRowValuesPtr, fromRowValuesPtr
       type (field1DReal), pointer :: toSValuesPtr, fromSValuesPtr
-      integer, pointer :: toNsLen, fromNsLen
+      integer, pointer :: nMpas, nGrid 
       integer, dimension(:), allocatable :: scount, stride ! For MPI_Gather/Scatter
       real, dimension(:), allocatable :: sshGlobal
       integer :: sizeOnProcess
@@ -168,8 +168,8 @@ contains
         call mpas_pool_get_field(forcingPool, 'fromColValues', fromColValuesPtr)
         call mpas_pool_get_field(forcingPool, 'toRowValues', toRowValuesPtr)
         call mpas_pool_get_field(forcingPool, 'fromRowValues', fromRowValuesPtr)
-        call mpas_pool_get_dimension(forcingPool, 'toNsLen', toNsLen)
-        call mpas_pool_get_dimension(forcingPool, 'fromNsLen', fromNsLen)
+        call mpas_pool_get_dimension(forcingPool, 'nMpas', nMpas)
+        call mpas_pool_get_dimension(forcingPool, 'nGrid', nGrid)
 
         print *, 'scount: ', scount
         print *, '---------------------------------'
@@ -212,13 +212,15 @@ contains
 
       integer :: toNcId, toStatus, toNsDimId, toRowId, toColId, toSId
       integer :: fromNcId, fromStatus, fromNsDimId, fromRowId, fromColId, fromSId
-      integer:: toNsLen, fromNsLen
+      integer:: nMpas, nGrid, nMpasDimId, nGridDimId
+      integer:: toNsLen, fromNsLen 
       integer :: toRowDims, toRowAtts, toColdDims, toColAtts, toNsDims, toNsAtts
       integer :: fromRowDims, fromRowAtts, fromColdDims, fromColAtts, fromNsDims, fromNsAtts
       integer, dimension(:), target, allocatable :: toRowValues, toColValues
       integer, dimension(:), target, allocatable :: fromRowValues, fromColValues
       real, dimension(:), target, allocatable :: toSValues, fromSValues
       character (len = NF90_MAX_NAME) :: toNsName, fromNsName
+      character (len = NF90_MAX_NAME) :: nMpasName, nGridName
       integer, pointer :: n_s
 
       type (field1DInteger), pointer :: toRowValuesPtr, toColValuesPtr
@@ -246,6 +248,8 @@ contains
       ! Get dimension ID
       call check( nf90_inq_dimid(toNcId, "n_s", toNsDimId) )
       call check( nf90_inq_dimid(fromNcId, "n_s", fromNsDimId) )
+      call check( nf90_inq_dimid(toNcId, "n_a", nMpasDimId) )
+      call check( nf90_inq_dimid(fromNcId, "n_a", nGridDimId) )
 
       ! Get Variable IDs
       call check( nf90_inq_varid(toNcId, "row", toRowId) )
@@ -258,6 +262,8 @@ contains
       ! Get Dimension Length
       call check( nf90_inquire_dimension(toNcId, toNsDimId, toNsName, toNsLen) )
       call check( nf90_inquire_dimension(fromNcId, fromNsDimId, fromNsName, fromNsLen) )
+      call check( nf90_inquire_dimension(toNcId, nMpasDimId, nMpasName, nMpas) )
+      call check( nf90_inquire_dimension(fromNcId, nGridDimId, nGridName, nGrid) )
 
       ! Allocate matrices to read data into
       allocate (toRowValues (toNsLen) )
@@ -302,8 +308,8 @@ contains
       do while ( associated( block_ptr ) )
          call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
  
-        call mpas_pool_add_dimension(forcingPool, 'toNsLen', toNsLen)
-        call mpas_pool_add_dimension(forcingPool, 'fromNsLen', fromNsLen)
+        call mpas_pool_add_dimension(forcingPool, 'nMpas', nMpas)
+        call mpas_pool_add_dimension(forcingPool, 'nGrid', nGrid)
         call mpas_pool_add_field(forcingPool, 'toColValues', toColValuesPtr)
         call mpas_pool_add_field(forcingPool, 'fromColValues', fromColValuesPtr)
         call mpas_pool_add_field(forcingPool, 'toRowValues', toRowValuesPtr)
@@ -350,8 +356,43 @@ contains
   end subroutine!}}}
 
 !***********************************************************************
+!
+!  routine check
+!
+!> \brief   Check status of netcdf operations
+!> \author  Kristin Barton
+!> \date    August 2020
+!> \details
+!>  This routine checks to status of the netcdf file
+!
+!-----------------------------------------------------------------------
+
+  subroutine interpolate( colValues, rowValues, sValues, dataIn, dataOut) !{{{
+
+      integer, dimension(:), intent(in) :: colValues, rowValues
+      real, dimension(:), intent(in) :: sValues, dataIn
+      real, dimension(:), intent(out) :: dataOut
+      real :: rhs = 0
+      integer :: n_S, n, nRow
+
+      n_S = size(sValues)
+      n = 1
+
+      do while (n .LE. n_S)
+        nRow = rowValues( n )
+        do while ( rowValues( n ) .EQ. nRow )
+          rhs = rhs + dataIn(n) * sValues(n)
+          n = n + 1
+        end do
+        dataOut(nRow) = rhs
+        rhs = 0
+      end do
+
+  end subroutine!}}}
 
 end module ocn_vel_self_attraction_loading!}}}
+
+!***********************************************************************
 
 !|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 ! vim: foldmethod=marker
