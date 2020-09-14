@@ -65,7 +65,7 @@ module ocn_vel_self_attraction_loading
    logical :: tidalPotentialOn
    logical :: selfAttractionLoadingOn
    type :: char_array
-     character(:), allocatable :: constituent
+   character(:), allocatable :: constituent
    end type
    type(char_array), dimension(37) :: constituentList
    public :: char_array
@@ -172,6 +172,8 @@ contains
         call mpas_pool_get_dimension(forcingPool, 'nGrid', nGrid)
 
         print *, 'scount: ', scount
+        print *, 'sshGlobal size: ', size(sshGlobal)
+        print *, 'sshGlobal : ', sshGlobal(1)
         print *, '---------------------------------'
 
       end if
