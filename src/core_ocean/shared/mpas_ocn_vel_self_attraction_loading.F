@@ -134,45 +134,45 @@ contains
       
 !      if (.NOT. selfAttractionLoadingOn) return
 
-      call mpas_pool_get_field(forcingPool, 'allNCells', allNCells)
+!      call mpas_pool_get_field(forcingPool, 'allNCells', allNCells)
       call mpas_pool_get_dimension(meshPool, 'nCells', nCells)
-
-      ! MPI commands
-      call MPI_COMM_RANK( dminfo % comm, process_Rank, err)
-      call MPI_COMM_SIZE( dminfo % comm, process_Size, err)
-      
-      if (process_Rank .EQ. 0) then
-        allocate( sshGlobal( sum(allNCells % array) ) )
-      end if
-
-      call mpas_pool_get_array(meshPool, 'indexToCellID', indexToCellID)
-
-      call MPI_BARRIER(dminfo % comm, err)
-      call MPI_GATHERV( ssh, nCells, MPI_REAL, sshGlobal, allNCells % array, &
-                        allNCells % array, MPI_REAL, 0, dminfo % comm, err)
-      
-      call MPI_BARRIER(dminfo % comm, err) 
-      if (process_Rank .EQ. 0) then
-
-        ! Get weight data from the pool
+!
+!      ! MPI commands
+!      call MPI_COMM_RANK( dminfo % comm, process_Rank, err)
+!      call MPI_COMM_SIZE( dminfo % comm, process_Size, err)
+!      
+!      if (process_Rank .EQ. 0) then
+!        allocate( sshGlobal( sum(allNCells % array) ) )
+!      end if
+!
+!      call mpas_pool_get_array(meshPool, 'indexToCellID', indexToCellID)
+!
+!      call MPI_BARRIER(dminfo % comm, err)
+!      call MPI_GATHERV( ssh, nCells, MPI_REAL, sshGlobal, allNCells % array, &
+!                        allNCells % array, MPI_REAL, 0, dminfo % comm, err)
+!      
+!      call MPI_BARRIER(dminfo % comm, err) 
+!      if (process_Rank .EQ. 0) then
+!
+!        ! Get weight data from the pool
         call mpas_pool_get_field(forcingPool, 'toColValues', toColValuesPtr)
         call mpas_pool_get_field(forcingPool, 'fromColValues', fromColValuesPtr)
         call mpas_pool_get_field(forcingPool, 'toRowValues', toRowValuesPtr)
         call mpas_pool_get_field(forcingPool, 'fromRowValues', fromRowValuesPtr)
         call mpas_pool_get_dimension(forcingPool, 'nMpas', nMpas)
         call mpas_pool_get_dimension(forcingPool, 'nGrid', nGrid)
-
+!
         print *, 'Time step'
-
-      end if
-
-      call MPI_BARRIER(dminfo % comm, err)
-      call MPI_SCATTERV( sshGlobal, allNCells % array, allNCells % array, MPI_REAL, &
-                        ssh, nCells, MPI_REAL, 0, dminfo % comm, err)
-
-      if (process_Rank .EQ. 0) then
-        deallocate( sshGlobal )
-      end if
+!
+!      end if
+!
+!      call MPI_BARRIER(dminfo % comm, err)
+!      call MPI_SCATTERV( sshGlobal, allNCells % array, allNCells % array, MPI_REAL, &
+!                        ssh, nCells, MPI_REAL, 0, dminfo % comm, err)
+!
+!      if (process_Rank .EQ. 0) then
+!        deallocate( sshGlobal )
+!      end if
 
    end subroutine ocn_compute_self_attraction_loading!}}}
 
@@ -226,8 +226,8 @@ contains
       block_ptr => domain % blocklist
       do while ( associated( block_ptr ) )
         call mpas_pool_get_config(ocnConfigs, 'config_use_self_attraction_loading', config_use_self_attraction_loading)
-        call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
-        call mpas_pool_get_dimension(meshPool, 'nCells', nCells) 
+!        call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
+!        call mpas_pool_get_dimension(meshPool, 'nCells', nCells) 
         
         block_ptr => block_ptr % next
       end do
@@ -241,14 +241,14 @@ contains
       end if
 
       ! Get MPI info
-      call MPI_COMM_RANK( domain % dminfo % comm, process_Rank, err)
-      call MPI_COMM_SIZE( domain % dminfo % comm, process_Size, err)
+!      call MPI_COMM_RANK( domain % dminfo % comm, process_Rank, err)
+!      call MPI_COMM_SIZE( domain % dminfo % comm, process_Size, err)
       ! Allocate arrays on root to gather number of cells
-      allocate( allNCellsPtr )
-      allocate( allNCellsPtr % array( process_Size ) ) 
+!      allocate( allNCellsPtr )
+!      allocate( allNCellsPtr % array( process_Size ) ) 
       ! Gather info to master node, so it can be placed into pool
-      call MPI_GATHER( nCells, 1, MPI_INTEGER, allNCellsPtr % array, 1, MPI_INTEGER, &
-                       0, domain % dminfo % comm, err)
+!      call MPI_GATHER( nCells, 1, MPI_INTEGER, allNCellsPtr % array, 1, MPI_INTEGER, &
+!                       0, domain % dminfo % comm, err)
 
       ! Open netcdf weights files
       call check( nf90_open(path = "mpas_to_grid.nc", mode = nf90_nowrite, ncid = toNcId) )
@@ -326,7 +326,7 @@ contains
         call mpas_pool_add_field(forcingPool, 'toSValues', toSValuesPtr)
         call mpas_pool_add_field(forcingPool, 'fromSValues', fromSValuesPtr)
 
-        call mpas_pool_add_field(forcingPool, 'allNCells', allNCellsPtr)
+!       call mpas_pool_add_field(forcingPool, 'allNCells', allNCellsPtr)
         
         block_ptr => block_ptr % next
       end do
