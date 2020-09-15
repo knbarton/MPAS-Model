@@ -125,8 +125,8 @@ contains
       type (field1DInteger), pointer :: toColValuesPtr, fromColValuesPtr
       type (field1DInteger), pointer :: toRowValuesPtr, fromRowValuesPtr
       type (field1DReal), pointer :: toSValuesPtr, fromSValuesPtr
-      integer, pointer :: nMpas, nGrid 
-      integer, dimension(:), allocatable :: scount, stride ! For MPI_Gather/Scatter
+      integer, pointer :: nMpas, nGrid, nCells
+      type (field1DInteger), pointer :: allNCells! For MPI_Gather/Scatter
       real, dimension(:), allocatable :: sshGlobal
       integer :: sizeOnProcess
 
@@ -134,32 +134,23 @@ contains
       
 !      if (.NOT. selfAttractionLoadingOn) return
 
+      call mpas_pool_get_field(forcingPool, 'allNCells', allNCells)
+      call mpas_pool_get_dimension(meshPool, 'nCells', nCells)
+
       ! MPI commands
-      sizeOnProcess = size(ssh)
       call MPI_COMM_RANK( dminfo % comm, process_Rank, err)
       call MPI_COMM_SIZE( dminfo % comm, process_Size, err)
       
-      ! Allocate arrays on root and gather sizes
-      allocate( scount( process_Size ) )
-!      allocate( stride( process_Size ) )
-!      stride(process_Rank) = sizeOnProcess
-       
-      call MPI_GATHER( sizeOnProcess, 1, MPI_INTEGER, scount, 1, MPI_INTEGER, &
-                       0, dminfo % comm, err)
-      call MPI_BCAST( scount, process_Size, MPI_INTEGER, 0, dminfo % comm, err)
-
       if (process_Rank .EQ. 0) then
-        allocate( sshGlobal( sum(scount) ) )
+        allocate( sshGlobal( sum(allNCells % array) ) )
       end if
 
       call mpas_pool_get_array(meshPool, 'indexToCellID', indexToCellID)
 
       call MPI_BARRIER(dminfo % comm, err)
-      call MPI_GATHERV( ssh, sizeOnProcess, MPI_REAL, sshGlobal, scount, scount, &
-                MPI_REAL, 0, dminfo % comm, err)
+      call MPI_GATHERV( ssh, nCells, MPI_REAL, sshGlobal, allNCells % array, &
+                        allNCells % array, MPI_REAL, 0, dminfo % comm, err)
       
-      print *, 'process ', process_Rank, ' size: ', sizeOnProcess
-
       call MPI_BARRIER(dminfo % comm, err) 
       if (process_Rank .EQ. 0) then
 
@@ -171,18 +162,14 @@ contains
         call mpas_pool_get_dimension(forcingPool, 'nMpas', nMpas)
         call mpas_pool_get_dimension(forcingPool, 'nGrid', nGrid)
 
-        print *, 'scount: ', scount
-        print *, 'sshGlobal size: ', size(sshGlobal)
-        print *, 'sshGlobal : ', sshGlobal(1)
-        print *, '---------------------------------'
+        print *, 'Time step'
 
       end if
 
       call MPI_BARRIER(dminfo % comm, err)
-      call MPI_SCATTERV( sshGlobal, scount, scount, MPI_REAL, ssh, sizeOnProcess, &
-                MPI_REAL, 0, dminfo % comm, err)
+      call MPI_SCATTERV( sshGlobal, allNCells % array, allNCells % array, MPI_REAL, &
+                        ssh, nCells, MPI_REAL, 0, dminfo % comm, err)
 
-      deallocate( scount )
       if (process_Rank .EQ. 0) then
         deallocate( sshGlobal )
       end if
@@ -210,7 +197,7 @@ contains
 
       logical, pointer :: config_use_self_attraction_loading
       type (block_type), pointer :: block_ptr
-      type (mpas_pool_type), pointer :: forcingPool
+      type (mpas_pool_type), pointer :: forcingPool, meshPool
 
       integer :: toNcId, toStatus, toNsDimId, toRowId, toColId, toSId
       integer :: fromNcId, fromStatus, fromNsDimId, fromRowId, fromColId, fromSId
@@ -229,11 +216,21 @@ contains
       type (field1Dinteger), pointer :: fromRowValuesPtr, fromColValuesPtr
       type (field1DReal), pointer :: toSValuesPtr, fromSValuesPtr
 
-      integer :: size_Of_Cluster
+      integer :: size_Of_Cluster, process_Size, process_Rank
+      integer, pointer :: nCells
+      integer, dimension(:), allocatable :: allNCells
+      type (field1DInteger), pointer :: allNCellsPtr
 
       err = 0
 
-      call mpas_pool_get_config(ocnConfigs, 'config_use_self_attraction_loading', config_use_self_attraction_loading)
+      block_ptr => domain % blocklist
+      do while ( associated( block_ptr ) )
+        call mpas_pool_get_config(ocnConfigs, 'config_use_self_attraction_loading', config_use_self_attraction_loading)
+        call mpas_pool_get_subpool(block_ptr % structs, 'mesh', meshPool)
+        call mpas_pool_get_dimension(meshPool, 'nCells', nCells) 
+        
+        block_ptr => block_ptr % next
+      end do
 
       selfAttractionLoadingOn = .false.
       if (config_use_self_attraction_loading) then
@@ -242,6 +239,16 @@ contains
 ! Remove comment when a testcase is setup with this true
 !         return
       end if
+
+      ! Get MPI info
+      call MPI_COMM_RANK( domain % dminfo % comm, process_Rank, err)
+      call MPI_COMM_SIZE( domain % dminfo % comm, process_Size, err)
+      ! Allocate arrays on root to gather number of cells
+      allocate( allNCellsPtr )
+      allocate( allNCellsPtr % array( process_Size ) ) 
+      ! Gather info to master node, so it can be placed into pool
+      call MPI_GATHER( nCells, 1, MPI_INTEGER, allNCellsPtr % array, 1, MPI_INTEGER, &
+                       0, domain % dminfo % comm, err)
 
       ! Open netcdf weights files
       call check( nf90_open(path = "mpas_to_grid.nc", mode = nf90_nowrite, ncid = toNcId) )
@@ -308,7 +315,7 @@ contains
       ! Add fields into the forcing pool
       block_ptr => domain % blocklist
       do while ( associated( block_ptr ) )
-         call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
+        call mpas_pool_get_subpool(block_ptr % structs, 'forcing', forcingPool)
  
         call mpas_pool_add_dimension(forcingPool, 'nMpas', nMpas)
         call mpas_pool_add_dimension(forcingPool, 'nGrid', nGrid)
@@ -318,6 +325,8 @@ contains
         call mpas_pool_add_field(forcingPool, 'fromRowValues', fromRowValuesPtr)
         call mpas_pool_add_field(forcingPool, 'toSValues', toSValuesPtr)
         call mpas_pool_add_field(forcingPool, 'fromSValues', fromSValuesPtr)
+
+        call mpas_pool_add_field(forcingPool, 'allNCells', allNCellsPtr)
         
         block_ptr => block_ptr % next
       end do
