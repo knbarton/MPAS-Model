@@ -161,6 +161,9 @@ contains
         call mpas_pool_get_field(forcingPool, 'fromRowValues', fromRowValuesPtr)
         call mpas_pool_get_dimension(forcingPool, 'nMpas', nMpas)
         call mpas_pool_get_dimension(forcingPool, 'nGrid', nGrid)
+
+        call shtns_verbose(3)
+        
 !
         print *, 'Time step'
 !

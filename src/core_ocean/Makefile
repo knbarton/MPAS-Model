@@ -1,22 +1,21 @@
 .SUFFIXES: .F .c .o
 
-
 OCEAN_SHARED_INCLUDES = -I$(PWD)/../framework -I$(PWD)/../external/esmf_time_f90 -I$(PWD)/../operators
 OCEAN_SHARED_INCLUDES += -I$(PWD)/BGC -I$(PWD)/shared -I$(PWD)/analysis_members -I$(PWD)/cvmix/src/shared -I$(PWD)/mode_forward -I$(PWD)/mode_analysis -I$(PWD)/mode_init -I$(PWD)/shtns
 
 all: shtns shared libcvmix analysis_members libBGC
+#	(cd shtns; echo $(FCINCLUDES); export CPP=cpp; ./configure --enable-openmp; make; export CPP='cpp -P -traditional')
 	(cd mode_forward; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
 	(cd mode_analysis; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
 	(cd mode_init; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
 	(cd driver; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)" all )
-	(cd shtns; echo $(FCINCLUDES); export CPP=cpp; ./configure --enable-openmp; echo "----- shtns ----"; make; export CPP='cpp -P -traditional')
 	if [ -e libdycore.a ]; then \
 		($(RM) libdycore.a) \
 	fi
 	ar -ru libdycore.a `find . -type f -name "*.o"`
 
-shtns:
-	(cd shtns; export CPP=cpp; ./configure --enable-openmp; echo "----- shtns ----"; make; export CPP='cpp -P -traditional')
+#shtns:
+#	(cd shtns; echo $(FCINCLUDES); export CPP=cpp; ./configure --enable-openmp; make; export CPP='cpp -P -traditional')
 
 core_reg:
 	$(CPP) $(CPPFLAGS) $(CPPINCLUDES) Registry.xml > Registry_processed.xml
@@ -63,7 +62,8 @@ libBGC:
 		(echo "Missing core_ocean/BGC/.git, did you forget to 'git submodule update --init --recursive' ?"; exit 1) \
 	fi
 
-shared: libcvmix libBGC shtns
+shared: libcvmix libBGC
+	(cd shtns; echo $(FCINCLUDES); export CPP=cpp; ./configure --enable-openmp; make; export CPP='cpp -P -traditional')
 	(cd shared; $(MAKE) FCINCLUDES="$(FCINCLUDES) $(OCEAN_SHARED_INCLUDES)")
 
 analysis_members: libcvmix shared
