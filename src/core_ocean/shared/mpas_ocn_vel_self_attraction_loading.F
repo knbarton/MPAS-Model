@@ -132,7 +132,7 @@ contains
 
       err = 0
       
-!      if (.NOT. selfAttractionLoadingOn) return
+      if (.NOT. selfAttractionLoadingOn) return
 
       call mpas_pool_get_field(forcingPool, 'allNCells', allNCells)
       call mpas_pool_get_dimension(meshPool, 'nCells', nCells)
@@ -236,8 +236,7 @@ contains
       if (config_use_self_attraction_loading) then
          selfAttractionLoadingOn = .true.
       else
-! Remove comment when a testcase is setup with this true
-!         return
+         return
       end if
 
       ! Get MPI info
